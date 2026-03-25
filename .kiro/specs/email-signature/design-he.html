@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>מסמך עיצוב — חתימת אימייל</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+      line-height: 1.7;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem;
+      background: #fafafa;
+      color: #222;
+    }
+    .notice {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin-bottom: 2rem;
+      font-size: 0.9rem;
+    }
+    h1 { color: #1a1a2e; border-bottom: 3px solid #0066cc; padding-bottom: 0.5rem; }
+    h2 { color: #16213e; border-bottom: 1px solid #ddd; padding-bottom: 0.3rem; margin-top: 2rem; }
+    h3 { color: #1a1a2e; margin-top: 1.5rem; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #ddd; padding: 10px 14px; text-align: right; }
+    th { background: #f0f0f0; font-weight: 600; }
+    tr:nth-child(even) { background: #f9f9f9; }
+    code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-family: 'Consolas', monospace; direction: ltr; unicode-bidi: embed; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 6px; overflow-x: auto; direction: ltr; text-align: left; font-size: 0.85rem; }
+    .badge-new { background: #28a745; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; }
+    .badge-modified { background: #ffc107; color: #333; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; }
+    .badge-unchanged { background: #6c757d; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; }
+    em { color: #555; }
+    strong { color: #1a1a2e; }
+  </style>
+</head>
+<body>
+
+<div class="notice">
+  מסמך זה הוא תרגום מלא של קובץ ה-design של ה-spec — לגרסה המקורית באנגלית ראו את קובץ ה-design המקורי
+</div>
+
+<h1>מסמך עיצוב — חתימת אימייל (Email Signature)</h1>
+
+<h2>סוג שינוי</h2>
+<p>🟢 <strong>Feature Spec</strong> — יכולת חדשה הדורשת תכנון מפורט</p>
+
+<h2>סקירה כללית</h2>
+<p>עיצוב זה מוסיף תמיכה בחתימות אימייל לשירות ה-<code>email-service</code>. הפיצ'ר מציג רכיב חדש בשם <code>SignatureManager</code> שאחראי על אחסון, שליפה ורינדור חתימות (כולל החלפת placeholders בתבניות). ה-<code>EmailSender</code> הקיים משתנה כך שיצרף את החתימה המעובדת לגוף האימייל לפני שליחה דרך SMTP.</p>
+<p>העיצוב עוקב אחרי הארכיטקטורה מבוססת האירועים הקיימת של ה-<code>email-service</code>. לא מוצגים API-ים חדשים או אירועים חדשים — הלוגיקה של החתימה היא פנימית לזרימת שליחת האימייל, ומופעלת על ידי האירוע הקיים <code>notification.sent</code>.</p>
+
+<h3>מסמכים מקושרים</h3>
+<ul>
+  <li>מפרט שירות: <code>system-sandbox/services/email-service/docs/specs/service-spec.md</code></li>
+  <li>ארכיטקטורה: <code>system-sandbox/services/email-service/docs/architecture.md</code></li>
+  <li>פיצ'ר — שליחת אימייל: <code>system-sandbox/services/email-service/docs/specs/features/email-delivery.md</code></li>
+  <li>דרישות: <code>.kiro/specs/email-signature/requirements.md</code></li>
+</ul>
+
+<h2>ארכיטקטורה</h2>
+
+<h3>זרימת שליחת אימייל מעודכנת</h3>
+<p>פיצ'ר החתימה מכניס את עצמו בין שלב 2 (חילוץ payload) לשלב 3 (שליחה דרך SMTP) של זרימת שליחת האימייל הקיימת.</p>
+<p><em>דיאגרמת רצף (Sequence Diagram):</em></p>
+<ol>
+  <li><code>Event Bus</code> שולח אירוע <code>notification.sent</code> ל-<code>NotificationSentHandler</code></li>
+  <li><code>NotificationSentHandler</code> מחלץ את ה-payload (to, subject, body, userId, skipSignature)</li>
+  <li>אם <code>skipSignature !== true</code>:
+    <ul>
+      <li><code>NotificationSentHandler</code> קורא ל-<code>SignatureManager.getSignature(userId, format)</code></li>
+      <li><code>SignatureManager</code> מחליט על חתימת משתמש או חתימת ברירת מחדל</li>
+      <li><code>SignatureManager</code> מעבד placeholders בתבנית</li>
+      <li><code>SignatureManager</code> מחזיר חתימה מעובדת (או null)</li>
+      <li><code>NotificationSentHandler</code> מצרף את החתימה לגוף האימייל</li>
+    </ul>
+  </li>
+  <li><code>NotificationSentHandler</code> קורא ל-<code>EmailSender.send({ to, subject, body })</code></li>
+  <li><code>EmailSender</code> שולח דרך ספק SMTP</li>
+  <li><code>EmailSender</code> מחזיר הצלחה / כישלון</li>
+  <li><code>NotificationSentHandler</code> מפרסם אירוע <code>email.delivered</code> / <code>email.failed</code></li>
+</ol>
+
+<h3>שירותים מושפעים</h3>
+<table>
+  <thead>
+    <tr><th>שירות</th><th>סוג שינוי</th><th>תיאור</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>email-service</code></td><td>שינוי + קוד חדש</td><td><code>SignatureManager</code> חדש, שינוי ב-<code>EmailSender</code> וב-<code>NotificationSentHandler</code></td></tr>
+    <tr><td><code>notification-service</code></td><td>ללא שינוי</td><td>כבר שולח <code>notification.sent</code> עם <code>userId</code> ב-payload</td></tr>
+    <tr><td><code>audit-service</code></td><td>ללא שינוי</td><td>כבר צורך אירועי <code>email.delivered</code> / <code>email.failed</code></td></tr>
+  </tbody>
+</table>
+
+<h2>רכיבים וממשקים</h2>
+
+<h3><span class="badge-new">חדש</span> SignatureManager — <code>src/services/signatureManager.js</code></h3>
+<p>אחראי על CRUD של חתימות, אחסון, עיבוד תבניות ולוגיקת שליפה.</p>
+</body>
+</html>
+
+<!-- המשך: רכיבים וממשקים -->
+
+<h4>מתודות:</h4>
+<ul>
+  <li><strong><code>saveSignature({ userId, textContent, htmlContent, isTemplate })</code></strong> — <span class="badge-new">חדש</span> שמירה או עדכון חתימה.
+    <ul>
+      <li><code>userId</code> — null עבור חתימת ברירת מחדל (ברמת הארגון)</li>
+      <li><code>textContent</code> — חתימה בפורמט טקסט רגיל</li>
+      <li><code>htmlContent</code> — חתימה בפורמט HTML</li>
+      <li><code>isTemplate</code> — האם החתימה מכילה <code>{{placeholders}}</code></li>
+      <li>מחזיר: רשומת חתימה שנשמרה</li>
+      <li>זורק שגיאה אם גם textContent וגם htmlContent ריקים</li>
+    </ul>
+  </li>
+  <li><strong><code>getSignature(userId, format, userData)</code></strong> — <span class="badge-new">חדש</span> שליפת החתימה המתאימה למשתמש. מחזירה חתימת משתמש אם קיימת, אחרת חתימת ברירת מחדל.
+    <ul>
+      <li><code>userId</code> — מזהה המשתמש</li>
+      <li><code>format</code> — <code>'text'</code> או <code>'html'</code></li>
+      <li><code>userData</code> — נתוני משתמש להחלפת placeholders בתבנית</li>
+      <li>מחזיר: תוכן חתימה מעובד, או null אם לא קיימת חתימה</li>
+    </ul>
+  </li>
+  <li><strong><code>deleteSignature(userId)</code></strong> — <span class="badge-new">חדש</span> מחיקת חתימה. <code>userId</code> null למחיקת חתימת ברירת מחדל.</li>
+  <li><strong><code>processTemplate(template, userData)</code></strong> — <span class="badge-new">חדש</span> עיבוד placeholders בתבנית חתימה. מחליף <code>{{field_name}}</code> בערכים מ-userData. מסיר placeholders שאין להם נתונים.
+    <ul>
+      <li><code>userData</code> — <code>{ fullName, role, phone, email, companyName }</code></li>
+    </ul>
+  </li>
+  <li><strong><code>validateSignature(textContent, htmlContent)</code></strong> — <span class="badge-new">חדש</span> אימות תוכן חתימה. מחזיר boolean.</li>
+</ul>
+
+<h3><span class="badge-modified">שינוי</span> EmailSender — <code>src/services/emailSender.js</code> (קיים, משתנה)</h3>
+<p>משתנה כך שיקבל ויצרף חתימה לגוף האימייל.</p>
+<h4>מתודות:</h4>
+<ul>
+  <li><strong><code>send({ to, subject, body, signature, format })</code></strong> — <span class="badge-modified">שינוי</span> כעת מקבל פרמטר חתימה אופציונלי.
+    <ul>
+      <li><code>signature</code> — חתימה מעובדת לצירוף</li>
+      <li><code>format</code> — פורמט גוף האימייל (<code>'text'</code> או <code>'html'</code>)</li>
+    </ul>
+  </li>
+  <li><strong><code>appendSignature(body, signature, format)</code></strong> — <span class="badge-new">חדש</span> צירוף חתימה לגוף האימייל עם מפריד ויזואלי.
+    <ul>
+      <li><code>body</code> — גוף האימייל המקורי</li>
+      <li><code>signature</code> — חתימה מעובדת</li>
+      <li><code>format</code> — קובע את סגנון המפריד</li>
+      <li>מחזיר: גוף עם חתימה מצורפת</li>
+    </ul>
+  </li>
+</ul>
+
+<h3><span class="badge-modified">שינוי</span> NotificationSentHandler — <code>src/handlers/notificationSentHandler.js</code> (קיים, משתנה)</h3>
+<p>משתנה כך שיתאם את שליפת החתימה ויעביר אותה ל-<code>EmailSender</code>.</p>
+<h4>מתודת <code>handle(event)</code> — <span class="badge-modified">שינוי</span>:</h4>
+<ol>
+  <li>חילוץ payload כולל userId ו-skipSignature</li>
+  <li>אם <code>skipSignature !== true</code>, קריאה ל-<code>signatureManager.getSignature()</code></li>
+  <li>העברת החתימה ל-<code>emailSender.send()</code></li>
+  <li>פרסום אירוע <code>email.delivered</code> או <code>email.failed</code></li>
+</ol>
+
+<h3><span class="badge-unchanged">ללא שינוי</span> EventPublisher — <code>src/events/publisher.js</code> (קיים, ללא שינוי)</h3>
+<p>אין צורך בשינויים. ממשיך לפרסם אירועי <code>email.delivered</code> ו-<code>email.failed</code>.</p>
+
+<h2>מודלי נתונים</h2>
+
+<h3>רשומת חתימה (Signature Record)</h3>
+<table>
+  <thead><tr><th>שדה</th><th>סוג</th><th>תיאור</th></tr></thead>
+  <tbody>
+    <tr><td><code>id</code></td><td>uuid</td><td>מזהה חתימה ייחודי</td></tr>
+    <tr><td><code>userId</code></td><td>string | null</td><td>null = חתימת ברירת מחדל ארגונית</td></tr>
+    <tr><td><code>textContent</code></td><td>string</td><td>גרסת טקסט רגיל של החתימה</td></tr>
+    <tr><td><code>htmlContent</code></td><td>string</td><td>גרסת HTML של החתימה</td></tr>
+    <tr><td><code>isTemplate</code></td><td>boolean</td><td>האם התוכן מכיל <code>{{placeholders}}</code></td></tr>
+    <tr><td><code>createdAt</code></td><td>ISO-8601</td><td>תאריך יצירה</td></tr>
+    <tr><td><code>updatedAt</code></td><td>ISO-8601</td><td>תאריך עדכון אחרון</td></tr>
+  </tbody>
+</table>
+
+<h3>רשומת לוג ביקורת חתימה (Signature Audit Log Entry)</h3>
+<table>
+  <thead><tr><th>שדה</th><th>סוג</th><th>תיאור</th></tr></thead>
+  <tbody>
+    <tr><td><code>signatureId</code></td><td>uuid</td><td>מזהה החתימה</td></tr>
+    <tr><td><code>userId</code></td><td>string | null</td><td>מזהה המשתמש</td></tr>
+    <tr><td><code>previousTextContent</code></td><td>string</td><td>תוכן טקסט קודם</td></tr>
+    <tr><td><code>previousHtmlContent</code></td><td>string</td><td>תוכן HTML קודם</td></tr>
+    <tr><td><code>changedAt</code></td><td>ISO-8601</td><td>תאריך השינוי</td></tr>
+    <tr><td><code>changeType</code></td><td>string</td><td><code>'update'</code> או <code>'delete'</code></td></tr>
+  </tbody>
+</table>
+
+<h3>Payload מורחב של אירוע — <code>notification.sent</code></h3>
+<p>ה-payload הקיים של אירוע <code>notification.sent</code> מורחב עם שדות אופציונליים:</p>
+<table>
+  <thead><tr><th>שדה</th><th>סוג</th><th>תיאור</th></tr></thead>
+  <tbody>
+    <tr><td><code>notificationId</code></td><td>uuid</td><td>מזהה ההתראה</td></tr>
+    <tr><td><code>userId</code></td><td>string</td><td>מזהה המשתמש</td></tr>
+    <tr><td><code>channel</code></td><td>string</td><td><code>'email'</code></td></tr>
+    <tr><td><code>templateId</code></td><td>string</td><td>מזהה התבנית</td></tr>
+    <tr><td><code>payload.to</code></td><td>string</td><td>כתובת הנמען</td></tr>
+    <tr><td><code>payload.subject</code></td><td>string</td><td>נושא האימייל</td></tr>
+    <tr><td><code>payload.body</code></td><td>string</td><td>תוכן גוף האימייל</td></tr>
+    <tr><td><code>payload.format</code></td><td>string</td><td><span class="badge-new">חדש</span> <code>'html'</code> או <code>'text'</code> — מציין את פורמט הגוף</td></tr>
+    <tr><td><code>payload.skipSignature</code></td><td>boolean</td><td><span class="badge-new">חדש</span> דגל ביטול חתימה</td></tr>
+    <tr><td><code>payload.userData</code></td><td>object</td><td><span class="badge-new">חדש</span> נתוני משתמש להחלפת placeholders</td></tr>
+    <tr><td><code>payload.userData.fullName</code></td><td>string</td><td>שם מלא</td></tr>
+    <tr><td><code>payload.userData.role</code></td><td>string</td><td>תפקיד</td></tr>
+    <tr><td><code>payload.userData.phone</code></td><td>string</td><td>מספר טלפון</td></tr>
+    <tr><td><code>payload.userData.email</code></td><td>string</td><td>כתובת אימייל</td></tr>
+    <tr><td><code>payload.userData.companyName</code></td><td>string</td><td>שם חברה</td></tr>
+  </tbody>
+</table>
+
+<h3>פורמט Placeholders בתבנית</h3>
+<p>Placeholders משתמשים בתחביר <code>{{field_name}}</code>. שדות נתמכים:</p>
+<table>
+  <thead><tr><th>Placeholder</th><th>שדה מקור</th><th>דוגמה</th></tr></thead>
+  <tbody>
+    <tr><td><code>{{fullName}}</code></td><td><code>userData.fullName</code></td><td>Jane Doe</td></tr>
+    <tr><td><code>{{role}}</code></td><td><code>userData.role</code></td><td>Software Engineer</td></tr>
+    <tr><td><code>{{phone}}</code></td><td><code>userData.phone</code></td><td>+1-555-0100</td></tr>
+    <tr><td><code>{{email}}</code></td><td><code>userData.email</code></td><td>jane@example.com</td></tr>
+    <tr><td><code>{{companyName}}</code></td><td><code>userData.companyName</code></td><td>Acme Corp</td></tr>
+  </tbody>
+</table>
+
+<h3>פורמטי מפריד</h3>
+<table>
+  <thead><tr><th>פורמט</th><th>מפריד</th></tr></thead>
+  <tbody>
+    <tr><td>טקסט רגיל</td><td><code>\n--\n</code></td></tr>
+    <tr><td>HTML</td><td><code>&lt;hr style="border:none;border-top:1px solid #ccc;margin:16px 0;"&gt;</code></td></tr>
+  </tbody>
+</table>
