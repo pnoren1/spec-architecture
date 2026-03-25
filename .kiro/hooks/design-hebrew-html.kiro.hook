@@ -1,0 +1,15 @@
+{
+  "name": "Hebrew Design Translation",
+  "description": "When a spec design file is edited, automatically generates a full word-for-word Hebrew HTML translation of the design for non-English speakers",
+  "version": "1.0.0",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "**/design.md"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "The design file was just updated. Read the updated design file and generate (or update) a FULL Hebrew HTML translation of the design.\n\nThis is NOT a summary — translate the ENTIRE document word-for-word into Hebrew. Every sentence, every paragraph, every detail must be translated.\n\nRules:\n- Write the HTML file in the SAME directory as the design file, with the name `design-he.html`\n- The HTML must be fully in Hebrew (RTL direction)\n- Use clean, professional styling with good readability\n- Translate EVERYTHING — do not skip, shorten, or summarize any part of the document\n- Translate technical terms but keep code identifiers (function names, file paths, event names, variable names) in English\n- Keep all tables, lists, and structural elements exactly as they appear in the original, just translated\n- Add a note at the top: \"מסמך זה הוא תרגום מלא של קובץ ה-design של ה-spec — לגרסה המקורית באנגלית ראו את קובץ ה-design המקורי\"\n- Structure the HTML with the exact same sections as the original design\n- Use semantic HTML elements for accessibility"
+  }
+}

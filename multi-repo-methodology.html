@@ -1,0 +1,1482 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מתודולוגיה לניהול ארכיטקטורה ו-SPEC במערכות מרובות REPO</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.8;
+    color: #1a1a1a;
+    background: #fafafa;
+    direction: rtl;
+  }
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+  h1 { font-size: 1.7em; margin: 48px 0 16px; color: #111; border-bottom: 2px solid #e0e0e0; padding-bottom: 8px; }
+  h2 { font-size: 1.3em; margin: 36px 0 12px; color: #222; }
+  h3 { font-size: 1.1em; margin: 24px 0 8px; color: #333; }
+  p { margin: 8px 0; }
+  ul, ol { margin: 8px 24px 8px 0; padding-right: 20px; }
+  li { margin: 4px 0; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 32px 0; }
+  pre {
+    background: #f4f4f4;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 16px;
+    overflow-x: auto;
+    direction: ltr;
+    text-align: left;
+    font-family: "Fira Code", "Consolas", "Monaco", monospace;
+    font-size: 0.88em;
+    line-height: 1.5;
+    margin: 8px 0;
+  }
+  code {
+    background: #f0f0f0;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: "Fira Code", "Consolas", "Monaco", monospace;
+    font-size: 0.9em;
+    direction: ltr;
+    unicode-bidi: embed;
+  }
+  pre code { background: none; padding: 0; }
+  strong { color: #111; }
+  details {
+    margin: 8px 0 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    background: #fff;
+  }
+  details summary {
+    padding: 10px 16px;
+    cursor: pointer;
+    font-weight: 600;
+    color: #444;
+    user-select: none;
+  }
+  details summary:hover { color: #111; }
+  details[open] summary { border-bottom: 1px solid #e8e8e8; }
+  details > div { padding: 12px 16px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0;
+    direction: ltr;
+    text-align: left;
+    font-size: 0.92em;
+  }
+  th, td { border: 1px solid #ddd; padding: 8px 12px; }
+  th { background: #f4f4f4; font-weight: 600; }
+  .file-path {
+    direction: ltr;
+    text-align: left;
+    margin: 4px 0;
+  }
+  nav a { text-decoration: none; color: #333; }
+  nav a:hover { color: #000; }
+  details.section {
+    margin: 24px 0;
+    border: 1px solid #d0d0d0;
+    border-radius: 8px;
+    background: #fff;
+  }
+  details.section > summary {
+    padding: 14px 20px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 1.5em;
+    color: #111;
+    user-select: none;
+    list-style: none;
+    border-bottom: none;
+  }
+  details.section > summary::-webkit-details-marker { display: none; }
+  details.section > summary::before {
+    content: "◀ ";
+    font-size: 0.6em;
+    margin-left: 8px;
+    transition: transform 0.2s;
+    display: inline-block;
+  }
+  details.section[open] > summary::before {
+    transform: rotate(-90deg);
+  }
+  details.section[open] > summary { border-bottom: 2px solid #e0e0e0; }
+  details.section > .section-content { padding: 16px 20px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>📘 מתודולוגיה לניהול ארכיטקטורה ו-SPEC במערכות מרובות REPO</h1>
+
+<p style="color:#aaa;font-size:0.75em;margin:2px 0 0;">v1.0.0 · מרץ 2026 · Pnina Oren</p>
+
+<nav style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:16px 24px;margin:24px 0;">
+<h2 style="margin:0 0 12px;font-size:1.15em;color:#333;">📑 תוכן עניינים</h2>
+<ul style="list-style:none;padding:0;margin:0;line-height:2;">
+  <li><a href="#goal">🎯 מטרה</a></li>
+  <li><a href="#workspace-structure">🏗️ 1. מבנה Workspace</a></li>
+  <li><a href="#repo-structure">📦 2. מבנה Repository</a></li>
+  <li><a href="#system-changes">🔄 3. תהליך הכנסת שינוי או פיצ'ר חדש למערכת</a></li>
+  <li><a href="#spec-hierarchy">🗂️ 4. ניהול היררכיות של SPEC בתוך Repository</a></li>
+  <li><a href="#versioning">🔀 5. ניהול שינויים וגירסאות בתהליך SDD</a></li>
+  <li><a href="#core-principles">⚙️ 6. עקרונות עבודה מרכזיים</a></li>
+  <li><a href="#advantages">✅ 7. יתרונות המתודולוגיה</a></li>
+</ul>
+</nav>
+
+<h2 id="goal">🎯 מטרה</h2>
+
+<p>מסמך זה מגדיר מתודולוגיה מומלצת לעבודה בארגון שבו קיימים מספר רב של מאגרי קוד (Repositories) כחלק ממערכת מבוזרת.</p>
+
+<p>המטרה היא לאפשר:</p>
+<ul>
+  <li>הבנה מהירה של המערכת</li>
+  <li>ניהול שינויי מערכת מורכבים</li>
+  <li>עבודה עקבית בין צוותים</li>
+  <li>שימוש יעיל בכלי AI לפיתוח</li>
+</ul>
+
+<p>המתודולוגיה מבוססת על היררכיית SPEC בשלוש רמות:</p>
+<ul>
+  <li>רמת מערכת (System)</li>
+  <li>רמת שירות (Service)</li>
+  <li>רמת פיצ'ר (Feature)</li>
+</ul>
+
+<p>מבנה זה מאפשר הפרדה ברורה בין ידע אפיוני וארכיטקטוני ברמת המערכת לבין ידע ספציפי של שירותים ופיצ'רים.</p>
+<p><strong>חשוב!</strong> המסמך מתאר מתודולוגיה, הביצוע בפועל נוצר באמצעות פרומפטים מוכנים ייעודיים, עליהם יש לעבור ולתקף את התוצרים.</p>
+
+<hr>
+
+<details class="section" id="workspace-structure">
+<summary>🏗️ 1. מבנה Workspace</summary>
+<div class="section-content">
+
+<p>במערכת הכוללת ריבוי Repositories וצוותים, יש להבחין בין סוגים שונים של Workspaces.</p>
+
+<h3>עקרון מנחה</h3>
+
+<p><strong>מידע קבוע ומתמשך</strong> ← ראוי ליצירת מסמכי docs ונשמר ב־System / Team Workspaces</p>
+<p><strong>מידע זמני ותלוּי יוזמה</strong> ← מצריך שיקול דעת האם יש צורך במסמכי docs שיישמרו ב־Feature Workspaces</p>
+<p>מסמכי docs מייצרים <strong>פעם אחת</strong> בלבד</p>
+<p>צורת העבודה היא <strong>מלמטה ללמעלה</strong>: מייצרים קודם כל מסמכי docs עבור כל REPO ← ורק אח"כ מייצרים מסמכי docs עבור ה Workspace</p>
+
+<hr>
+
+<h2 id="workspace-types">📦 1.1 סוגי Workspace</h2>
+
+<h3>1. System Workspace</h3>
+
+<p><strong>תפקיד:</strong> מקור האמת המערכתי (System-Level Source of Truth)</p>
+
+<p><strong>מאפיינים:</strong> מייצג את המערכת כולה, יציב לאורך זמן, אינו תלוי צוות או פיצ'ר ספציפי</p>
+
+<p><strong>כולל:</strong></p>
+<ul>
+  <li>System Overview (גבולות מערכת, שירותים, flows מרכזיים)</li>
+  <li>Services Index (רשימת שירותים, קישורים ל-repos ול-SPECים)</li>
+  <li>Cross-Service Contracts (APIs לוגיים, events, schemas)</li>
+  <li>Architectural Decision Records (ADR)</li>
+  <li>Standards / Conventions</li>
+</ul>
+
+<p><strong>לא כולל:</strong></p>
+<ul>
+  <li>פירוט פנימי של שירותים</li>
+  <li>לוגיקה או מימושים</li>
+</ul>
+
+<hr>
+
+<h3>2. Team / Domain Workspace</h3>
+
+<p><strong>תפקיד:</strong> מקור האמת של שירותים בבעלות צוות</p>
+
+<p><strong>מאפיינים:</strong> קבוע ויציב, משויך לצוות או דומיין, מייצג ownership ברור</p>
+
+<p><strong>כולל:</strong></p>
+<ul>
+  <li>רשימת השירותים של הצוות</li>
+  <li>SPECים מלאים של השירותים (או קישורים אליהם בתוך ה-repos)</li>
+  <li>תיעוד פנימי רלוונטי לצוות</li>
+</ul>
+
+<p><strong>לא כולל:</strong></p>
+<ul>
+  <li>תיעוד מערכת כולל</li>
+  <li>flows רוחביים בין מספר צוותים (אלא אם מצומצם להקשר הצוות)</li>
+</ul>
+
+<hr>
+
+<h3>3. Feature Workspace</h3>
+
+<p><strong>תפקיד:</strong> סביבת עבודה לפיתוח פיצ'ר או יוזמה (Working Space)</p>
+
+<p><strong>מאפיינים:</strong> זמני, ממוקד פיצ'ר / פרויקט, חוצה צוותים ושירותים</p>
+
+<p><strong>כולל:</strong></p>
+<ul>
+  <li>תיאור הפיצ'ר (overview)</li>
+  <li>flow end-to-end</li>
+  <li>רשימת שירותים מושפעים</li>
+  <li>שינויים נדרשים / gaps</li>
+  <li>שאלות פתוחות</li>
+</ul>
+
+<p><strong>לא כולל:</strong></p>
+<ul>
+  <li>SPECים מלאים של שירותים</li>
+  <li>שכפול מידע קיים</li>
+  <li>מקור אמת מתמשך</li>
+</ul>
+
+<p><strong>הנחיה מרכזית:</strong> יש להפנות (link) ל-SPECים ול-repos הקיימים, ולא להעתיקם.</p>
+
+<hr>
+
+<h2 id="usage-rules">📏 1.2 חוקי שימוש</h2>
+
+<ul>
+  <li>SPEC של שירות מתועד ב-Team Workspace או ב-repo של השירות בלבד</li>
+  <li>חוזים בין שירותים מתועדים ב-System Workspace</li>
+  <li>flows זמניים ופיתוח פיצ'רים מתועדים ב-Feature Workspace</li>
+  <li>אין לשכפל מידע בין Workspaces – יש להשתמש בקישורים</li>
+  <li>לכל Workspace חייב להיות סוג מוגדר (system / team / feature)</li>
+  <li>ההפרדה בין System / Team / Feature היא קונספטואלית, ולכן היא צריכה להיות גם פיזית — אין לערבב תיעוד מסוגים שונים באותה תיקיית <code>docs</code>. כל Workspace מנהל תיקיית <code>docs</code> עצמאית, בהתאם לסוגו</li>
+</ul>
+
+<hr>
+
+<h2 id="workspace-type-definition">🏷️ 1.3 הגדרת סוג ה-Workspace</h2>
+
+<p>לכל Workspace חובה לזהות ולהצהיר על הסוג שלו (system / team / feature).</p>
+
+<h3>דרך מימוש: הצהרה ב-README</h3>
+
+<p>הדרך המינימלית היא לציין בראש קובץ ה-README של ה-Workspace את הפרטים הבאים:</p>
+<pre><code>Type: &lt;system | team | feature&gt;
+Owner: &lt;team-name&gt;
+Scope: &lt;short description&gt;</code></pre>
+
+<h3>הרחבה אפשרית: קובץ הגדרה workspace.yaml</h3>
+
+<p>לצרכים מתקדמים (כגון אוטומציה, כלי CI, או כלי AI שצריכים לקרוא את סוג ה-Workspace באופן תכנותי), ניתן להוסיף קובץ הגדרה בתיקיית docs של ה-Workspace:</p>
+<pre><code>type: &lt;system | team | feature&gt;
+name: &lt;workspace-name&gt;
+owner: &lt;team-name&gt;</code></pre>
+
+<h2 id="workspace-diagram">🗂️ 1.4 תרשים מבנה ה Workspace</h2>
+
+<p>תרשים זה מתאר סוגים שונים של workspaces עם תיקיות שונות עבור כל סוג</p>
+
+<pre><code>workspace
+│
+├─ system-workspace
+│  └─ docs
+│     ├─ architecture
+│     │  ├─ system-overview.md    ← System
+│     │  └─ services-index.md     ← System
+│     ├─ specs
+│     |  └─ system-spec.md        ← System
+|     ├─ workspace.yaml
+│     └─ README.md
+|
+├─ team-a-workspace
+│  └─ docs
+│     ├─ architecture
+│     │  ├─ team-a-overview.md    ← Team / Domain
+│     │  └─ services-index.md     ← Team / Domain
+│     ├─ specs
+│     |  └─ team-a-spec.md        ← Team / Domain
+|     ├─ workspace.yaml
+│     └─ README.md
+|
+├─ feature-x-workspace
+│  └─ docs
+│     ├─ feature-x-overview.md   ← Feature
+|     ├─ workspace.yaml
+│     └─ README.md
+│
+├─ repo-a
+├─ repo-b
+└─ repo-c</code></pre>
+
+<h2 id="system-overview">🔭 1.5 System Overview</h2>
+
+<p>קובץ:</p>
+<pre class="file-path"><code>docs/architecture/system-overview.md</code></pre>
+
+<p>קובץ זה מספק תיאור כללי של המערכת.</p>
+
+<p>תוכן אופייני:</p>
+<ul>
+  <li>גבולות המערכת</li>
+  <li>השירותים הקיימים במערכת</li>
+  <li>תחומי הדומיין</li>
+  <li>זרימות מרכזיות (flows)</li>
+  <li>אירועים בין שירותים</li>
+  <li>APIs בין שירותים</li>
+</ul>
+
+<p>מטרת הקובץ היא לאפשר להבין את המערכת <strong>מבלי לפתוח אף Repository</strong>.</p>
+
+<details>
+<summary>דוגמה</summary>
+<div>
+<pre><code># System Overview — Notification Platform
+
+## System Boundaries
+
+- Inbound: User registration events from external identity provider
+- Outbound: Email delivery via external SMTP provider
+- Internal: All inter-service communication via event bus and REST APIs
+- External Consumers: Admin dashboard (reads audit logs)
+
+## Domains
+
+| Domain | Services |
+|---|---|
+| User Management | user-service |
+| Messaging | notification-service, email-service, template-service |
+| Compliance | audit-service |
+
+## Services
+
+| Service | Responsibility |
+|---|---|
+| user-service | Manages user profiles and lifecycle events |
+| notification-service | Coordinates notifications and routes messages |
+| email-service | Handles email delivery |
+| template-service | Stores and renders notification templates |
+| audit-service | Stores audit logs and system activity |
+
+## Key Flows
+
+### User Welcome Email Flow
+1. `user-service` publishes `user.created`
+2. `notification-service` consumes event, fetches user details and resolves template
+3. `notification-service` publishes `notification.sent`
+4. `email-service` consumes event, sends email via SMTP
+5. `email-service` publishes `email.delivered` or `email.failed`
+6. `audit-service` logs all events throughout the flow
+
+### Email Retry Flow
+1. `email-service` publishes `email.failed` with `retryable: true`
+2. `notification-service` consumes event and re-triggers delivery
+3. Retry uses exponential backoff, max 3 attempts
+
+## Event Bus
+
+| Event | Producer | Consumers |
+|---|---|---|
+| `user.created` | user-service | notification-service, audit-service |
+| `notification.sent` | notification-service | email-service, audit-service |
+| `email.delivered` | email-service | audit-service |
+| `email.failed` | email-service | notification-service, audit-service |
+
+## APIs (Synchronous)
+
+| Endpoint | Service | Consumers |
+|---|---|---|
+| `GET /users/:id` | user-service | notification-service |
+| `POST /templates/resolve` | template-service | notification-service |
+| `GET /audit/events` | audit-service | (external / admin) |</code></pre>
+</div>
+</details>
+
+<h2 id="services-index">📇 1.6 Services Index</h2>
+
+<p>קובץ:</p>
+<pre class="file-path"><code>docs/architecture/services-index.md</code></pre>
+
+<p>קובץ זה מהווה אינדקס ומפה של כל השירותים במערכת.</p>
+
+<p>תוכן אופייני:</p>
+<ul>
+  <li>שם השירות</li>
+  <li>תחום הדומיין</li>
+  <li>מיקום ה-Repository</li>
+  <li>שירותים שעליהם השירות תלוי</li>
+  <li>אירועים שהשירות מפרסם</li>
+  <li>אירועים שהשירות צורך</li>
+</ul>
+
+<h3>מטרת האינדקס היא לאפשר להבין במהירות:</h3>
+<ul>
+  <li>אילו שירותים קיימים במערכת</li>
+  <li>כיצד השירותים תלויים זה בזה</li>
+  <li>אילו שירותים עשויים להיות מושפעים משינוי</li>
+</ul>
+
+<p>האינדקס מאפשר גם לכלי AI להבין את מבנה המערכת מבלי לסרוק קוד.</p>
+
+<details>
+<summary>דוגמה</summary>
+<div>
+<pre><code># Services Index — Notification Platform
+
+### notification-service
+- **Domain:** Messaging
+- **Location:** `services/notification-service/`
+- **AI Entry:** `services/notification-service/docs/context/service-context.md`
+- **Service Spec:** `services/notification-service/docs/specs/service-spec.md`
+- **Responsibility:** Coordinates notifications and routes messages to delivery channels
+- **Dependencies:** user-service (REST), template-service (REST)
+- **Events Produced:** `notification.sent`
+- **Events Consumed:** `user.created`, `email.failed`
+- **APIs:** `GET /notifications/:userId`
+
+### email-service
+- **Domain:** Messaging
+- **Location:** `services/email-service/`
+- **AI Entry:** `services/email-service/docs/context/service-context.md`
+- **Service Spec:** `services/email-service/docs/specs/service-spec.md`
+- **Responsibility:** Handles email delivery via SMTP
+- **Dependencies:** notification-service (events), external SMTP provider
+- **Events Produced:** `email.delivered`, `email.failed`
+- **Events Consumed:** `notification.sent`
+- **APIs:** None (event-driven only)
+
+### audit-service
+- **Domain:** Compliance
+- **Location:** `services/audit-service/`
+- **AI Entry:** `services/audit-service/docs/context/service-context.md`
+- **Service Spec:** `services/audit-service/docs/specs/service-spec.md`
+- **Responsibility:** Stores audit logs and system activity
+- **Dependencies:** None
+- **Events Produced:** None
+- **Events Consumed:** `user.created`, `notification.sent`, `email.delivered`, `email.failed`
+- **APIs:** `GET /audit/events`</code></pre>
+</div>
+</details>
+
+<h2 id="system-spec">📋 1.7 System SPEC</h2>
+
+<p>קובץ:</p>
+<pre class="file-path"><code>docs/specs/system-spec.md</code></pre>
+
+<p>קובץ זה מתאר את ה-SPEC ברמת המערכת.</p>
+
+<p>תוכן אופייני:</p>
+<ul>
+  <li>דרישות מערכת</li>
+  <li>ארכיטקטורה כללית</li>
+  <li>החלטות עיצוב מערכתיות</li>
+  <li>סטנדרטים ארגוניים</li>
+  <li>עקרונות ארכיטקטורה</li>
+</ul>
+
+<details>
+<summary>דוגמה</summary>
+<div>
+<pre><code># System Specification — Notification Platform
+
+## System Requirements
+
+### Functional Requirements
+- The system shall deliver notifications to users via email upon lifecycle events
+- The system shall support templated messages with dynamic content resolution
+- The system shall maintain a complete audit trail of all system activity
+- The system shall retry failed email deliveries automatically
+
+### Non-Functional Requirements
+- Event delivery: at-least-once semantics
+- Email retry: exponential backoff, max 3 attempts
+- Audit logs: immutable, append-only, retained for 90 days
+- API response time: &lt; 200ms (p95) for synchronous calls
+- System availability: 99.9% uptime target
+
+## Architecture Overview
+
+- Communication model: event-driven (async) + REST (sync)
+- Event bus: RabbitMQ with durable queues
+- Each service owns its own data store (Database per Service)
+- No shared databases between services
+- All inter-service contracts are versioned
+
+## Architectural Decisions
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| Async over Sync | Event-driven as default | Reduces coupling, improves resilience |
+| Database per Service | Each service owns its DB | Enforces bounded contexts, independent deployments |
+| Template resolution | Sync REST call | Templates needed before send, low latency required |
+| Retry ownership | email-service owns retries | Keeps retry logic close to the delivery mechanism |
+| Audit as consumer | audit-service listens to all events | Decoupled from business logic, no impact on flows |
+
+## Standards &amp; Conventions
+
+- Event naming: `&lt;domain&gt;.&lt;past-tense-verb&gt;` (e.g. `user.created`, `email.delivered`)
+- Event schema: all events must include `eventId`, `timestamp`, `source`
+- API versioning: URL path prefix (`/v1/`, `/v2/`)
+- Error responses: RFC 7807 Problem Details format
+- Logging: structured JSON, must include `correlationId`
+- Health checks: every service exposes `GET /health`
+
+## Architecture Principles
+
+- **Loose Coupling:** services communicate via events; direct dependencies are minimized
+- **Single Responsibility:** each service owns one domain and one data store
+- **Observability First:** all services emit structured logs and health endpoints
+- **Immutable Audit:** audit records are append-only and never modified
+- **Graceful Degradation:** failure in one service must not cascade to others</code></pre>
+</div>
+</details>
+
+<hr>
+
+<h2 id="team-workspace-docs">👥 1.8 מסמכי Team / Domain Workspace</h2>
+
+<p>ה-Team Workspace עוקב אחרי מבנה דומה ל-System Workspace, אך בהיקף מצומצם לשירותים שבבעלות הצוות.</p>
+
+<h3>Team Overview</h3>
+
+<p>קובץ:</p>
+<pre class="file-path"><code>docs/architecture/team-overview.md</code></pre>
+
+<p>קובץ זה מספק תיאור כללי של תחום האחריות של הצוות והשירותים שבבעלותו.</p>
+
+<p>בניגוד ל-System Overview שמתאר את המערכת כולה, קובץ זה ממוקד בדומיין הספציפי של הצוות.</p>
+
+<p>תוכן אופייני:</p>
+<ul>
+  <li>תחום האחריות של הצוות</li>
+  <li>השירותים שבבעלות הצוות</li>
+  <li>זרימות מרכזיות בתוך הדומיין</li>
+  <li>נקודות ממשק עם צוותים אחרים</li>
+</ul>
+
+<details>
+<summary>דוגמה</summary>
+<div>
+<pre><code># Team Overview — Messaging Team
+
+## Ownership
+
+The Messaging team owns all services related to notification delivery and email communication.
+
+## Services
+
+| Service | Responsibility |
+|---|---|
+| notification-service | Coordinates notifications and routes messages |
+| email-service | Handles email delivery via SMTP |
+| template-service | Stores and renders notification templates |
+
+## Key Flows
+
+### Notification Delivery Flow
+1. `notification-service` receives trigger event
+2. Fetches user preferences and resolves template
+3. Routes to appropriate delivery channel (currently: email only)
+4. `email-service` delivers via SMTP
+
+## Integration Points with Other Teams
+
+| Team | Interface | Purpose |
+|---|---|---|
+| User Management | `user.created` event, `GET /users/:id` API | Trigger notifications, fetch user data |
+| Compliance | `email.delivered`, `email.failed` events | Audit logging |</code></pre>
+</div>
+</details>
+
+<h3>Team Services Index</h3>
+
+<p>קובץ:</p>
+<pre class="file-path"><code>docs/architecture/services-index.md</code></pre>
+
+<p>זהה במבנה ל-Services Index המערכתי (סעיף 1.6), אך כולל רק את השירותים שבבעלות הצוות.</p>
+
+<p>מטרתו לאפשר ניווט מהיר בין שירותי הצוות, כולל קישורים ל-repos ול-SPECים.</p>
+
+<h3>Team SPEC</h3>
+
+<p>קובץ:</p>
+<pre class="file-path"><code>docs/specs/team-spec.md</code></pre>
+
+<p>קובץ זה מתאר את ה-SPEC ברמת הצוות / הדומיין.</p>
+
+<p>תוכן אופייני:</p>
+<ul>
+  <li>אחריות הצוות</li>
+  <li>עקרונות עיצוב ספציפיים לדומיין</li>
+  <li>סטנדרטים פנימיים של הצוות</li>
+  <li>קישורים ל-Service SPECs של השירותים שבבעלות הצוות</li>
+</ul>
+
+<details>
+<summary>דוגמה</summary>
+<div>
+<pre><code># Team Specification — Messaging Team
+
+## Responsibilities
+
+- Own the full notification delivery pipeline
+- Ensure reliable email delivery with retry mechanisms
+- Manage notification templates and rendering
+
+## Domain Design Principles
+
+- All delivery channels are event-driven
+- Template resolution is synchronous (low latency requirement)
+- Retry logic is owned by the delivery service, not the coordinator
+
+## Team Standards
+
+- All events follow the naming convention: `&lt;domain&gt;.&lt;past-tense-verb&gt;`
+- Every handler must log `correlationId` for traceability
+- New delivery channels must be added as separate services
+
+## Service Specifications
+
+- [notification-service Spec](../../services/notification-service/docs/specs/service-spec.md)
+- [email-service Spec](../../services/email-service/docs/specs/service-spec.md)
+- [template-service Spec](../../services/template-service/docs/specs/service-spec.md)</code></pre>
+</div>
+</details>
+
+<hr>
+
+<h2 id="feature-workspace-docs">🎯 1.9 מסמכי Feature Workspace</h2>
+
+<p>ה-Feature Workspace הוא זמני וממוקד ביוזמה ספציפית. המסמכים שלו שונים מהותית מ-System ו-Team כי הם מתארים שינוי מתוכנן ולא מצב קיים.</p>
+
+<h3>Feature Overview</h3>
+
+<p>קובץ:</p>
+<pre class="file-path"><code>docs/feature-overview.md</code></pre>
+
+<p>קובץ זה מתאר את הפיצ'ר או היוזמה, כולל ההשפעה על שירותים קיימים.</p>
+
+<p>תוכן אופייני:</p>
+<ul>
+  <li>מטרת הפיצ'ר</li>
+  <li>Flow מקצה לקצה</li>
+  <li>שירותים מושפעים ושינויים נדרשים בכל אחד מהם</li>
+  <li>Gaps ושאלות פתוחות</li>
+  <li>קישורים ל-SPECים ול-repos הרלוונטיים</li>
+</ul>
+
+<details>
+<summary>דוגמה</summary>
+<div>
+<pre><code># Feature Overview — SMS Notification Channel
+
+## Purpose
+
+Add SMS as a new delivery channel alongside email.
+Users will be able to receive notifications via SMS based on their preferences.
+
+## End-to-End Flow
+
+1. `notification-service` receives trigger event
+2. Fetches user preferences (email / SMS / both)
+3. For SMS: publishes `notification.sms.requested`
+4. New `sms-service` consumes event and sends via SMS provider
+5. `sms-service` publishes `sms.delivered` or `sms.failed`
+6. `audit-service` logs all SMS events
+
+## Affected Services
+
+| Service | Change Required |
+|---|---|
+| notification-service | Add SMS routing logic, publish new event |
+| user-service | Add SMS preference to user profile |
+| audit-service | Consume new SMS events |
+| sms-service | **New service** — SMS delivery via external provider |
+
+## Gaps &amp; Open Questions
+
+- [ ] Which SMS provider to use? (Twilio / AWS SNS)
+- [ ] Should SMS retry logic mirror email retry?
+- [ ] Rate limiting for SMS — per user or global?
+- [ ] Regulatory requirements for SMS opt-in/opt-out
+
+## Related Documents
+
+- [System Overview](../system-workspace/docs/architecture/system-overview.md)
+- [notification-service Spec](../services/notification-service/docs/specs/service-spec.md)
+- [user-service Spec](../services/user-service/docs/specs/service-spec.md)</code></pre>
+</div>
+</details>
+
+<p><strong>הערה:</strong> ב-Feature Workspace אין צורך ב-Services Index או Architecture נפרדים.
+המידע הרלוונטי מרוכז ב-Feature Overview, ולפרטים נוספים יש להפנות למסמכים הקיימים ב-System ו-Team Workspaces.</p>
+
+</div>
+</details>
+
+<details class="section" id="repo-structure">
+<summary>📦 2. מבנה Repository</summary>
+<div class="section-content">
+
+<p>כל שירות במערכת מנוהל ב-Repository נפרד.</p>
+
+<p>מבנה מומלץ:</p>
+<pre><code>repo-name
+│
+├─ src
+├─ tests
+│
+├─ docs
+│  ├─ context
+│  │   └─ service-context.md
+│  ├─ repo-overview.md
+│  ├─ architecture.md
+│  ├─ code-map.md
+│  └─ specs
+│      ├─ service-spec.md
+│      └─ features
+│          ├─ feature-a-spec.md
+│          └─ feature-b-spec.md
+│
+├─ .kiro            # => אם משתמשים עם KIRO
+│   ├─ specs
+│   └─ steering
+│
+└─ _bmad-output     # => אם משתמשים עם BMAD</code></pre>
+
+<h2 id="context">🤖 2.1 Context</h2>
+
+<p>קובץ:</p>
+<pre class="file-path"><code>docs/context/service-context.md</code></pre>
+
+<p>קובץ זה משמש נקודת כניסה לכלי AI להבנת השירות.</p>
+
+<p>תוכן אופייני:</p>
+<ul>
+  <li>מה השירות עושה</li>
+  <li>היכן נמצאים מסמכי השירות (overview, architecture, code map)</li>
+  <li>היכן נמצא ה-Service SPEC וה-Feature SPECs</li>
+  <li>היכן נמצאים קבצי steering ו-specs שנוצרו על ידי כלים (כגון KIRO או BMAD)</li>
+  <li>איפה נמצאים קבצים מערכתיים קשורים (ברמת המערכת כולה שרלוונטים לשירות להכיר ולעבוד לפיהם)</li>
+</ul>
+
+<p>קובץ זה יעיל במיוחד עבור כלי AI.</p>
+
+<details>
+<summary>דוגמה</summary>
+<div>
+<pre><code># AI Entry — email-service
+
+This is the main navigation point for AI-assisted exploration of email-service.
+
+## Service Documents
+
+- [Repository Overview](../repo-overview.md) — What this repo contains and how to work with it
+- [Architecture](../architecture.md) — Internal architecture and design decisions
+- [Code Map](../code-map.md) — Source code structure and key files
+
+## KIRO Steering Files
+
+- .kiro/steering/architecture.md
+- .kiro/steering/patterns.md
+
+## Specifications
+
+- [Service Spec](../spec/service-spec.md) — Service responsibilities, APIs, events, dependencies
+- [Feature: Email Delivery](../spec/features/email-delivery.md)
+- [Feature: Email Retry Mechanism](../spec/features/email-retry-mechanism.md)
+
+## Generated specs
+
+- .kiro/specs/
+- _bmad-output/
+
+## System-Level Documents
+
+- [System Overview](../../../../architecture/system-overview.md)
+- [Services Index](../../../../architecture/services-index.md)
+- [System Spec](../../../../specs/system-spec.md)
+- [Change: Add User Notification Flow](../../../../specs/changes/change-add-user-notification-flow.md)
+
+## Quick Context
+
+- **Responsibility:** Handles email delivery via SMTP
+- **Events Produced:** `email.delivered`, `email.failed`
+- **Events Consumed:** `notification.sent`
+- **APIs:** None (event-driven only)
+- **Dependencies:** SMTP provider, event bus</code></pre>
+</div>
+</details>
+
+<h2 id="repo-overview">📄 2.2 Repo Overview</h2>
+
+<p>קובץ:</p>
+<pre class="file-path"><code>docs/repo-overview.md</code></pre>
+
+<p>קובץ זה מתאר את השירות ברמה עסקית וארכיטקטונית.</p>
+
+<p>תוכן:</p>
+<ul>
+  <li>לאיזה Domain השירות שייך</li>
+  <li>מה השירות עושה</li>
+  <li>גבולות האחריות של השירות</li>
+  <li>כיצד השירות משתלב במערכת הכוללת</li>
+  <li>Tech Stack</li>
+</ul>
+
+<p>קובץ זה עשוי להקביל למסמך ה product שניתן לייצר עם KIRO Steering files
+ולכן אם הוא קיים - אפשר לקשר אליו</p>
+
+<details>
+<summary>דוגמה</summary>
+<div>
+<pre><code># Repository Overview — email-service
+
+## Domain
+
+Messaging
+
+## Purpose
+
+The email-service is responsible for delivering emails.
+It consumes `notification.sent` events, formats the email,
+sends it via SMTP, and publishes delivery status events.
+
+## Boundaries
+
+- Owns: email formatting and SMTP delivery
+- Does NOT own: notification routing, template resolution, user data
+- Input: events from notification-service
+- Output: delivery status events (email.delivered, email.failed)
+
+## System Integration
+
+- Consumes `notification.sent` events from notification-service
+- Publishes `email.delivered` and `email.failed` events consumed by audit-service and notification-service
+- No synchronous API — fully event-driven
+
+## Tech Stack
+
+- Runtime: Node.js
+- SMTP: Nodemailer
+- Event Bus: RabbitMQ</code></pre>
+</div>
+</details>
+
+<h2 id="architecture">🏛️ 2.3 Architecture</h2>
+
+<p>קובץ:</p>
+<pre class="file-path"><code>docs/architecture.md</code></pre>
+
+<p>קובץ זה מתאר את הארכיטקטורה של השירות.</p>
+
+<p>תוכן אופייני:</p>
+<ul>
+  <li>החלטות עיצוב (Design Decisions)</li>
+  <li>אינטראקציות עם שירותים אחרים</li>
+  <li>event flows מרכזיים</li>
+  <li>APIs</li>
+  <li>דיאגרמות זרימה</li>
+</ul>
+
+<p>קובץ זה עשוי להקביל למסמכי ה structure + tech שניתן לייצר עם KIRO Steering files
+ולכן אם הם קיימים - אפשר לקשר אליהם</p>
+
+<details>
+<summary>דוגמה</summary>
+<div>
+<pre><code># Architecture — email-service
+
+## Design Decisions
+
+- **Event-driven only:** No REST API; all work is triggered by events
+- **Retry with backoff:** Failed deliveries are retried with exponential backoff
+- **Provider abstraction:** SMTP provider is abstracted for easy swapping
+
+## Service Interactions
+
+| Service | Direction | Method | Purpose |
+|---|---|---|---|
+| notification-service | Inbound | Event (`notification.sent`) | Triggers email delivery |
+| audit-service | Outbound | Event (`email.delivered`, `email.failed`) | Audit logging |
+| notification-service | Outbound | Event (`email.failed`) | Triggers retry flow |
+
+## APIs
+
+This service does not expose any REST APIs. All communication is event-driven.
+
+## Email Delivery Flow
+
+1. Consume `notification.sent` event
+2. Format email (to, subject, body from event payload)
+3. Send via SMTP provider
+4. Publish `email.delivered` or `email.failed`</code></pre>
+</div>
+</details>
+
+<h2 id="code-map">🗺️ 2.4 Code Map</h2>
+
+<p>קובץ:</p>
+<pre class="file-path"><code>docs/code-map.md</code></pre>
+
+<p>קובץ זה מסביר את מבנה הקוד של השירות.</p>
+
+<p>תוכן:</p>
+<ul>
+  <li>מבנה תיקיות</li>
+  <li>רכיבים מרכזיים</li>
+  <li>נקודות כניסה לקוד</li>
+</ul>
+
+<p>המטרה היא לאפשר להבין <strong>היכן דברים נמצאים</strong> מבלי לסרוק את כל הקוד.</p>
+
+<details>
+<summary>דוגמה</summary>
+<div>
+<pre><code># Code Map — email-service
+
+## Source Structure
+
+| Path | Description |
+|---|---|
+| `src/index.js` | Application entry point, starts event consumers |
+| `src/handlers/notificationSentHandler.js` | Handles `notification.sent` events |
+| `src/services/emailSender.js` | SMTP email sending logic |
+| `src/events/publisher.js` | Event bus publisher for delivery status |</code></pre>
+</div>
+</details>
+
+<h2 id="service-spec">📋 2.5 Service SPEC</h2>
+
+<p>קובץ:</p>
+<pre class="file-path"><code>docs/specs/service-spec.md</code></pre>
+
+<p>זהו מסמך ה-SPEC המרכזי של השירות.</p>
+
+<p>תוכן אופייני:</p>
+<ul>
+  <li>אחריות השירות</li>
+  <li>קישורים ל-Feature SPECs</li>
+  <li>קישורים ל-specs שנוצרו על ידי כלים (כגון KIRO או BMAD)</li>
+  <li>שירותים תלויים</li>
+  <li>אירועים שהשירות מפרסם</li>
+  <li>אירועים שהשירות צורך</li>
+  <li>APIs שהשירות מספק</li>
+  <li>מבנה פנימי של השירות</li>
+</ul>
+
+<p>כאשר משתמשים בכלים שמייצרים קבצי SPEC (כגון KIRO או BMAD), אין לשכפל SPEC.</p>
+
+<p>במקום זאת יש להפנות אל הקבצים שנוצרו על ידי הכלים באמצעות link</p>
+
+<details>
+<summary>דוגמה</summary>
+<div>
+<pre><code># Service Specification — email-service
+
+## Responsibilities
+
+- Consume notification events and deliver emails via SMTP
+- Manage email delivery retries with exponential backoff
+- Publish delivery status events
+
+## Features Specifications
+
+- [Feature: Email Delivery](./features/email-delivery.md)
+- [Feature: Email Retry Mechanism](./features/email-retry-mechanism.md)
+
+## Generated specs
+
+- `.kiro/specs/`
+- `_bmad-output/`
+
+## Events Produced
+
+| Event | Schema | Trigger |
+|---|---|---|
+| `email.delivered` | `{ emailId, notificationId, deliveredAt }` | Email successfully sent |
+| `email.failed` | `{ emailId, notificationId, reason, retryable }` | Email delivery failed |
+
+## Dependencies
+
+| Service | Method | Purpose |
+|---|---|---|
+| notification-service | Event (`notification.sent`) | Triggers email delivery |
+| External SMTP provider | SMTP | Email delivery |
+
+## Events Produced
+
+| Event | Schema | Trigger |
+|---|---|---|
+| `email.delivered` | `{ emailId, notificationId, deliveredAt }` | Email successfully sent |
+| `email.failed` | `{ emailId, notificationId, reason, retryable }` | Email delivery failed |
+
+## Events Consumed
+
+| Event | Source | Handler |
+|---|---|---|
+| `notification.sent` | notification-service | `NotificationSentHandler` — sends email |
+
+## APIs
+
+This service does not expose any REST APIs. All communication is event-driven.
+
+## Internal Structure
+
+| Component | Responsibility |
+|---|---|
+| `NotificationSentHandler` | Consumes events and triggers email sending |
+| `EmailSender` | SMTP email sending logic |
+| `Publisher` | Publishes delivery status events |</code></pre>
+</div>
+</details>
+
+<h2 id="feature-spec">🧩 2.6 Feature SPEC</h2>
+
+<p>קבצי SPEC ברמת פיצ'ר ממוקמים תחת:</p>
+<pre class="file-path"><code>docs/specs/features/</code></pre>
+
+<p>דוגמאות:</p>
+<pre class="file-path"><code>feature-a-spec.md
+feature-b-spec.md</code></pre>
+
+<p>תוכן אופייני:</p>
+<ul>
+  <li>מטרת הפיצ'ר</li>
+  <li>קלטים ופלטים</li>
+  <li>זרימות פנימיות</li>
+  <li>אינטראקציות עם שירותים אחרים</li>
+</ul>
+
+<p>SPECים אלו משמשים לניהול שינויי פיתוח ברמת פיצ'ר.</p>
+
+<details>
+<summary>דוגמה</summary>
+<div>
+<pre><code># Feature Specification — Email Delivery
+
+## Service Context
+
+This feature is part of email-service.
+For the full service specification, see:
+
+#[[file:../service-spec.md]]
+
+## Purpose
+
+Handle the delivery of emails via SMTP when a notification event is received.
+
+## Inputs
+
+| Input | Source | Format |
+|---|---|---|
+| `notification.sent` event | notification-service | `{ notificationId, to, subject, body }` |
+
+## Outputs
+
+| Output | Target | Format |
+|---|---|---|
+| `email.delivered` event | audit-service | `{ emailId, notificationId, deliveredAt }` |
+| `email.failed` event | notification-service, audit-service | `{ emailId, notificationId, reason, retryable }` |
+
+## Internal Flow
+
+1. `NotificationSentHandler` receives event
+2. Extracts recipient, subject, and body from payload
+3. Calls `EmailSender.send()` with formatted email
+4. On success: publishes `email.delivered`
+5. On failure: publishes `email.failed` with `retryable` flag
+
+## Service Interactions
+
+| Service | Direction | Method | Purpose |
+|---|---|---|---|
+| notification-service | Inbound | Event | Receives `notification.sent` |
+| audit-service | Outbound | Event | Reports delivery status |
+| notification-service | Outbound | Event | Reports failure for retry |</code></pre>
+</div>
+</details>
+
+</div>
+</details>
+
+<details class="section" id="system-changes">
+<summary>🔄 3. תהליך הכנסת שינוי או פיצ'ר חדש למערכת</summary>
+<div class="section-content">
+
+<p>כאשר שינוי משפיע על מספר שירותים יש לפעול לפי התהליך הבא:</p>
+
+<pre><code>System Change SPEC
+        ↓
+Service SPEC updates
+        ↓
+Feature SPEC updates
+        ↓
+Code changes</code></pre>
+
+<p>גישה זו מבטיחה שכל שינוי מערכתי יתועד ברמה המתאימה.</p>
+
+</div>
+</details>
+
+<details class="section" id="spec-hierarchy">
+<summary>🗂️ 4. ניהול היררכיות של SPEC בתוך Repository</summary>
+<div class="section-content">
+
+<p>כאשר רוצים ליצור SPEC כללי לפרוייקט שמכיל את כל הדרישות והעיצוב הטכני (והמשימות) של הפרויקט כולו, אפשר ליצור אותו בתיקיית <code>.kiro/specs/</code> ישירות ולשלב יחד איתו גם SPEC ספציפיים.</p>
+
+<h2 id="recommended-structure">📂 4.1 המבנה המומלץ</h2>
+
+<pre><code>.kiro/specs/
+  requirements.md         # דרישות כלליות של הפרויקט
+  design.md               # ארכיטקטורה כללית
+  tasks.md                # משימות ברמת הפרויקט
+
+  secure-file-distribution/  # feature ספציפי
+    requirements.md
+    design.md
+    tasks.md
+
+  client-file-upload-ui/     # feature ספציפי
+    requirements.md
+    design.md
+    tasks.md</code></pre>
+
+<p>היתרונות:</p>
+<ul>
+  <li>✓ ה-spec הכללי מכיל את הארכיטקטורה הכוללת, תקני קוד, והחלטות עיצוב ברמת המערכת</li>
+  <li>✓ כל feature קטן יכול להתייחס ל-spec הכללי ולהתמקד רק בפרטים הספציפיים שלו</li>
+  <li>✓ אפשר לקשר בין ה-specs עם <code>#[[file:../requirements.md]]</code></li>
+</ul>
+
+<h2 id="spec-links">🔗 4.2 איך ליצור קישורים בין Specs</h2>
+
+<p>פשוט מוסיפים את הסינטקס <code>#[[file:path/to/file.md]]</code> בתוך קובץ ה-spec. זה עובד גם ב-requirements, design וגם ב-tasks.</p>
+
+<h3>דוגמה: הוספת קישור ל-spec כללי</h3>
+
+<p>בקובץ <code>.kiro/specs/client-file-upload-ui/requirements.md</code>:</p>
+
+<details>
+<summary>דוגמה</summary>
+<div>
+<pre><code># מסמך דרישות: פקד העלאת קבצים מצד הלקוח
+
+## הקשר למערכת הכללית
+
+דרישות אלו הן חלק ממערכת ה-Secure File Distribution Service.
+לדרישות כלליות של המערכת, ראה:
+
+#[[file:../requirements.md]]
+
+## מבוא
+
+...</code></pre>
+</div>
+</details>
+
+<h3>איך זה עובד</h3>
+
+<p>כשפותחים את הקובץ <code>client-file-upload-ui/requirements.md</code> ב-Kiro, הקישור <code>#[[file:../requirements.md]]</code> יהיה לחיץ ויוביל ישירות ל-spec הכללי.</p>
+
+<h3>קישורים דו-כיווניים</h3>
+
+<p>זה עובד גם בכיוון ההפוך - אפשר להוסיף קישורים מה-spec הכללי ל-specs הספציפיים.
+למשל, בקובץ <code>tasks.md</code> הכללי:</p>
+
+<details>
+<summary>דוגמה</summary>
+<div>
+<pre><code>## קישורים
+
+- #[[file:requirements.md]] - דרישות מפורטות
+- #[[file:design.md]] - ארכיטקטורה
+- #[[file:secure-file-distribution/tasks.md]] - משימות feature ספציפי
+- #[[file:client-file-upload-ui/tasks.md]] - משימות UI client
+- #[[file:../../README.md]] - הוראות התקנה</code></pre>
+</div>
+</details>
+
+<p>היתרונות של שיטה זו:</p>
+<ul>
+  <li>✓ <strong>ניווט מהיר בין מסמכים</strong> - קליק אחד מעביר בין specs</li>
+  <li>✓ <strong>Kiro יכול לקרוא אוטומטית</strong> קבצים מקושרים כשצריך הקשר</li>
+  <li>✓ <strong>מבנה היררכי ברור</strong> - כללי ← ספציפי</li>
+  <li>✓ <strong>תחזוקה קלה</strong> - שינוי במקום אחד משפיע על כולם</li>
+</ul>
+
+<h2 id="structure-summary">📊 4.3 סיכום המבנה שנוצר</h2>
+
+<pre><code>.kiro/specs/
+├── requirements.md         ← Spec כללי: דרישות המערכת
+├── design.md               ← Spec כללי: ארכיטקטורה
+├── tasks.md                ← Spec כללי: משימות פרויקט
+│
+├── secure-file-distribution/
+│   ├── requirements.md     ← Feature ספציפי
+│   ├── design.md
+│   └── tasks.md
+│
+└── client-file-upload-ui/
+    ├── requirements.md     ← Feature ספציפי
+    ├── design.md           (מקשר ל-spec כללי עם #[[file:../requirements.md]])
+    └── tasks.md</code></pre>
+
+</div>
+</details>
+
+<details class="section" id="versioning">
+<summary>🔀 5. ניהול שינויים וגירסאות בתהליך SDD</summary>
+<div class="section-content">
+
+<h2 id="basic-principle">💡 עיקרון בסיסי</h2>
+
+<p>השאלה היא לא <strong>האם</strong> למזג שינויים ל-SPEC הראשי – אלא <strong>מתי</strong>.</p>
+
+<p>בפועל עובדים עם <strong>SPEC ראשי יציב</strong> + <strong>SPEC-ים משלימים</strong> לשינויים.</p>
+
+<p>כל זה בהנחה שעובדים בתצורה של MS ולכל REPO יש תחום אחריות מוגדר.</p>
+
+<p>במידה ולא או שיש מורכבות גדולה - יש להקפיד על היררכיות SPEC עבור כל מודול/פיצ'ר משמעותי <strong>מבלי למזג, יחד עם קישורים מתאימים</strong> בכדי לא לייצר עומס על SPEC אחד.</p>
+
+<hr>
+
+<h2 id="spec-types">📚 סוגי SPEC ומתי למזג</h2>
+
+<h3>1️⃣ Main Spec</h3>
+
+<p>ה-SPEC שמגדיר את המערכת כפי שהיא אמורה לעבוד <strong>עכשיו</strong>.</p>
+
+<p><strong>מתי לעדכן?</strong> אחרי Release, כאשר יש שינויים מצטברים רבים</p>
+
+<p><strong>מטרה:</strong> לשמור Single Source of Truth - מקור אמת יחיד</p>
+
+<h3>2️⃣ Feature Spec</h3>
+
+<p>SPEC לפיצ'ר חדש. פיצ'ר שמצריך חשיבה אירגון ותכנון מפורט, אולי אפילו שינוי ארכיטקטורה וכד'.</p>
+
+<p><strong>מתי ליצור?</strong> לכל פיצ'ר משמעותי</p>
+
+<p><strong>מתי למזג?</strong> לאחר סיום פיתוח ואישור הפיצ'ר, לרוב כחלק מ-Release</p>
+
+<h3>3️⃣ Change Request / Bug Spec</h3>
+
+<p>עדכון קטן או שינוי התנהגות - שו"ש/משימה קטנה/באג וכד'.</p>
+
+<p><strong>מתי ליצור?</strong> שינוי לוגיקה, שינוי API, שינוי UX</p>
+
+<p><strong>מתי למזג?</strong> כאשר מסיימים את הפיתוח</p>
+
+<h3>4️⃣ Proposal / RFC Spec</h3>
+
+<p>SPEC לדיון בלבד.</p>
+
+<p><strong>מתי ליצור?</strong> כשעדיין לא ברור אם הפיצ'ר יאושר</p>
+
+<p><strong>מתי למזג?</strong> רק אם אושר, אחרת נשאר כ-Proposal היסטורי</p>
+
+<hr>
+
+<h2 id="when-version">🏷️ מתי ליצור גרסאות SPEC</h2>
+
+<p><strong>מומלץ ליצור גרסה כאשר:</strong></p>
+<ul>
+  <li>✓ יש Release גדול</li>
+  <li>✓ יש שינוי ארכיטקטוני משמעותי</li>
+  <li>✓ ה-SPEC השתנה בצורה נרחבת</li>
+</ul>
+
+<p><strong>לדוגמה:</strong></p>
+<pre class="file-path"><code>system-spec-v1.md
+system-spec-v2.md</code></pre>
+
+<hr>
+
+<h2 id="when-not-merge">מתי לא למזג SPEC?</h2>
+<p>הפיצ'ר עדיין בניסוי, או שמדובר ב-Proposal בלבד, או שהשינוי עלול להשתנות בקרוב</p>
+<p><strong>במצב כזה משאירים SPEC נפרד.</strong></p>
+
+<h2 id="merge-keep-original">מתי כן למזג אבל להשאיר את ה-SPEC המקורי?</h2>
+
+<p><strong>מומלץ כאשר:</strong> חשוב תיעוד החלטות, רוצים היסטוריית Design, ה-SPEC שימש כ-RFC</p>
+
+<p><strong>במקרה כזה:</strong></p>
+<pre><code>spec/
+  system-spec.md
+
+proposals/
+  accepted/
+    feature-x-proposal.md
+    feature-y-proposal.md
+  rejected/
+    feature-z-proposal.md</code></pre>
+
+<h2 id="work-principle">🎯 עיקרון העבודה</h2>
+
+<p>שינויים נכתבים ב-SPEC קטן ← מאושרים ← ממוזגים בזמן מתאים ל-SPEC הראשי</p>
+
+<details style="border:2px solid #7c3aed;border-radius:8px;background:#faf5ff;">
+<summary style="padding:12px 16px;cursor:pointer;font-weight:600;color:#7c3aed;font-size:1.05em;user-select:none;">🎬 דמו: מיזוג Spec נפרד ל-Spec הכללי</summary>
+<div>
+
+<blockquote style="border-right:4px solid #ddd;padding:4px 16px 4px 0;margin:12px 0;color:#555;">
+שיחה עם Kiro שמדגימה תהליך מיזוג spec של feature (file-size-limit-update) לתוך ה-spec הכללי של הפרויקט.
+</blockquote>
+
+<hr>
+
+<h3>הקשר</h3>
+
+<p>הפרויקט: <strong>Secure File Distribution Service</strong> - מערכת serverless להעלאה, אחסון והפצה מאובטחת של קבצים על AWS.</p>
+
+<p>במהלך הפיתוח נוצר spec נפרד בתיקייה <code>.kiro/specs/file-size-limit-update/</code> שמתאר עדכון של מגבלת גודל הקובץ מ-10GB ל-5MB. ה-spec הכללי נמצא ב-<code>.kiro/specs/</code> (requirements.md, design.md, tasks.md).</p>
+
+<hr>
+
+<h3>השיחה</h3>
+
+<h4>👤 משתמש:</h4>
+<blockquote style="border-right:4px solid #ddd;padding:4px 16px 4px 0;margin:12px 0;color:#555;">
+אני רוצה למזג את ה-SPEC של file-size-limit-update ל-SPEC הכללי, איך אתה ממליץ לעשות את זה?
+</blockquote>
+
+<h4>🤖 Kiro:</h4>
+
+<p>Kiro בדק את שני ה-specs (הנפרד והכללי) והציע 3 אופציות:</p>
+
+<p><strong>אופציה 1: מיזוג מלא לתוך ה-spec הכללי</strong> (מומלץ)</p>
+<ul>
+  <li>עדכון requirements.md הכללי - שינוי מ-10GB ל-5MB והסרת multipart</li>
+  <li>עדכון design.md הכללי - עדכון Upload Handler והסרת לוגיקת multipart</li>
+  <li>הוספת המשימות ל-tasks.md הכללי כ-Task חדש</li>
+  <li>מחיקת התיקייה file-size-limit-update</li>
+</ul>
+
+<p><strong>אופציה 2: שמירה כ-spec נפרד עם קישור</strong> (פחות מומלץ)</p>
+<ul>
+  <li>השארת file-size-limit-update כ-spec עצמאי</li>
+  <li>הוספת קישור ב-requirements.md הכללי</li>
+</ul>
+
+<p><strong>אופציה 3: מיזוג חלקי</strong> (מומלץ ביותר)</p>
+<ul>
+  <li>עדכון requirements.md ו-design.md הכלליים</li>
+  <li>שמירת file-size-limit-update כתיעוד היסטורי</li>
+</ul>
+
+<hr>
+
+<h4>👤 משתמש:</h4>
+<blockquote style="border-right:4px solid #ddd;padding:4px 16px 4px 0;margin:12px 0;color:#555;">
+רוצה את אופציה 1
+</blockquote>
+
+<h4>🤖 Kiro:</h4>
+
+<p>Kiro ביצע את המיזוג המלא באופן אוטומטי:</p>
+
+<h4>שלב 1: עדכון requirements.md הכללי</h4>
+
+<p>שינויים שבוצעו:</p>
+<ul>
+  <li>מטרות המערכת: "תמיכה בקבצים גדולים: עד 10GB עם multipart upload" → "תמיכה בקבצים: עד 5MB עם העלאה פשוטה"</li>
+  <li>סעיף העלאת קבצים: הסרת multipart, הוספת הודעות שגיאה בעברית, תאימות לאחור</li>
+  <li>מגבלות טכניות: עדכון מ-10GB ל-5MB, הוספת הערה על קבצים legacy</li>
+  <li>קריטריוני הצלחה: עדכון מ-"1 דקה לקובץ 1GB" ל-"10 שניות לקובץ 5MB"</li>
+  <li>ניהול מחזור חיים: הסרת "multipart" מ-cleanup</li>
+</ul>
+
+<h4>שלב 2: עדכון design.md הכללי</h4>
+
+<p>שינויים שבוצעו:</p>
+<ul>
+  <li>API Endpoints: "סיום multipart upload" → "סיום העלאה"</li>
+  <li>Upload Handler Flow: הוספת validation של 5MB, הסרת multipart</li>
+  <li>Environment Variables: הסרת <code>MAX_FILE_SIZE_GB</code> ו-<code>MULTIPART_THRESHOLD_MB</code>, הוספת <code>MAX_FILE_SIZE_BYTES</code></li>
+  <li>Data Flow - Upload: הוספת בדיקת גודל קובץ, שימוש ב-single presigned URL</li>
+  <li>UploadSession Table: הסרת שדות multipart, הוספת שדות legacy (deprecated)</li>
+  <li>FileMetadata Table: הוספת הערה על קבצים legacy</li>
+  <li>Performance Optimization: הסרת "S3 multipart for large files"</li>
+  <li>אומדן עלויות: עדכון לקבצים קטנים יותר</li>
+</ul>
+
+<h4>שלב 3: הוספת Task 15 ל-tasks.md הכללי</h4>
+
+<p>Task 15 חדש נוסף עם כל ה-subtasks מה-spec המקורי:</p>
+<ul>
+  <li>15.1-15.14 עם סטטוס מעודכן (חלק כבר הושלמו ✅)</li>
+  <li>משימות אופציונליות מסומנות ב-<code>*</code> (property-based tests)</li>
+  <li>רשימת קבצים מושפעים</li>
+  <li>הערות על testing ותאימות לאחור</li>
+  <li>עדכון סדר עדיפויות (Task 15 במקום הראשון)</li>
+</ul>
+
+<h4>שלב 4: מחיקת ה-spec הנפרד</h4>
+
+<p>קבצים שנמחקו:</p>
+<ul>
+  <li><code>.kiro/specs/file-size-limit-update/requirements.md</code></li>
+  <li><code>.kiro/specs/file-size-limit-update/design.md</code></li>
+  <li><code>.kiro/specs/file-size-limit-update/tasks.md</code></li>
+  <li><code>.kiro/specs/file-size-limit-update/.config.kiro</code></li>
+</ul>
+
+<hr>
+
+<h3>סיכום</h3>
+
+<p>התהליך הדגים כיצד Kiro יכול:</p>
+<ol>
+  <li><strong>לנתח</strong> שני specs ולהבין את ההבדלים ביניהם</li>
+  <li><strong>להציע</strong> אופציות מיזוג שונות עם יתרונות וחסרונות</li>
+  <li><strong>לבצע</strong> מיזוג מלא באופן אוטומטי - עדכון 3 קבצים ומחיקת 4 קבצים</li>
+  <li><strong>לשמור</strong> על עקביות בין כל חלקי ה-spec (requirements, design, tasks)</li>
+  <li><strong>לנקות</strong> את ה-spec הנפרד אחרי המיזוג</li>
+</ol>
+
+<p>כל זה בוצע בשיחה אחת, ללא צורך בעריכה ידנית של הקבצים.</p>
+
+</div>
+</details>
+
+</div>
+</details>
+
+<details class="section" id="core-principles">
+<summary>⚙️ 6. עקרונות עבודה מרכזיים</summary>
+<div class="section-content">
+
+<p>המתודולוגיה מבוססת על העקרונות הבאים:</p>
+
+<ul>
+  <li><strong>הפרדת רמות ידע</strong> — מערכת / שירות / פיצ'ר</li>
+  <li><strong>תיעוד לפני קוד</strong> — SPEC נכתב או מתעדכן לפני מימוש בקוד</li>
+  <li><strong>הצהרת תלות מפורשת</strong> — כל שירות מצהיר על APIs, events, dependencies</li>
+  <li><strong>ארכיטקטורה ידידותית ל-AI</strong> — מבנה התיעוד מאפשר לכלי AI לנווט במערכת מבלי לסרוק קוד רב</li>
+</ul>
+
+</div>
+</details>
+
+<details class="section" id="advantages">
+<summary>✅ 7. יתרונות המתודולוגיה</summary>
+<div class="section-content">
+
+<p>יישום מתודולוגיה זו מאפשר:</p>
+<ul>
+  <li>הבנה מהירה של מערכות גדולות</li>
+  <li>עבודה יעילה עם עשרות Repositories</li>
+  <li>שימוש אפקטיבי בכלי AI לפיתוח</li>
+  <li>מניעת חוסר עקביות בין שירותים</li>
+  <li>ניהול נכון של שינויי מערכת מורכבים</li>
+</ul>
+
+</div>
+</details>
+
+</div>
+</body>
+</html>
