@@ -1084,19 +1084,18 @@ Code changes
 
 ```
 .kiro/specs/
-  requirements.md         # דרישות כלליות של הפרויקט
-  design.md               # ארכיטקטורה כללית
-  tasks.md                # משימות ברמת הפרויקט
-
-  secure-file-distribution/  # feature ספציפי
-    requirements.md
-    design.md
-    tasks.md
-
-  client-file-upload-ui/     # feature ספציפי
-    requirements.md
-    design.md
-    tasks.md
+├── requirements.md         ← Spec כללי: דרישות המערכת
+├── design.md               ← Spec כללי: ארכיטקטורה
+│
+├── secure-file-distribution/
+│   ├── requirements.md     ← Feature ספציפי
+│   ├── design.md
+│   └── tasks.md
+│
+└── client-file-upload-ui/
+    ├── requirements.md     ← Feature ספציפי
+    ├── design.md           (מקשר ל-spec כללי עם #[[file:../requirements.md]])
+    └── tasks.md
 ```
 </div>
 
@@ -1111,7 +1110,7 @@ Code changes
 
 פשוט מוסיפים את הסינטקס `#[[file:path/to/file.md]]` בתוך קובץ ה-spec. זה עובד גם ב-requirements, design וגם ב-tasks.
 
-### דוגמה: הוספת קישור ל-spec כללי
+### דוגמה:
 
 בקובץ `.kiro/specs/client-file-upload-ui/requirements.md`:
 
@@ -1140,22 +1139,8 @@ Code changes
 ### קישורים דו-כיווניים
 
 זה עובד גם בכיוון ההפוך - אפשר להוסיף קישורים מה-spec הכללי ל-specs הספציפיים.
-למשל, בקובץ `tasks.md` הכללי:
 
-<div dir="ltr">
-
-```markdown
-## קישורים
-
-- #[[file:requirements.md]] - דרישות מפורטות
-- #[[file:design.md]] - ארכיטקטורה
-- #[[file:secure-file-distribution/tasks.md]] - משימות feature ספציפי
-- #[[file:client-file-upload-ui/tasks.md]] - משימות UI client
-- #[[file:../../README.md]] - הוראות התקנה
-```
-</div>
-
-היתרונות של שיטה זו:
+### היתרונות של שיטה זו:
 
 * ✓ **ניווט מהיר בין מסמכים** - קליק אחד מעביר בין specs
 * ✓ **Kiro יכול לקרוא אוטומטית** קבצים מקושרים כשצריך הקשר
@@ -1163,27 +1148,46 @@ Code changes
 * ✓ **תחזוקה קלה** - שינוי במקום אחד משפיע על כולם
 
 
-## 📊 4.3 סיכום המבנה שנוצר
+## 🎯 4.3 מקור האמת של SPEC — `docs/specs/` מול כלי AI
+
+### הבעיה
+
+כאשר עובדים עם כלי AI כמו KIRO או BMAD, נוצרים קבצי SPEC בתיקיות ייעודיות לכלי (כגון `.kiro/specs/` או `_bmad-output/`).
+במקביל, המתודולוגיה מגדירה `docs/specs/service-spec.md` כ-SPEC הכללי של השירות.
+
+נשאלת השאלה: **איפה נכון לכתוב את התוכן המלא של ה-SPEC הכללי?**
+
+### העיקרון המנחה
 
 <div dir="ltr">
 
 ```
-.kiro/specs/
-├── requirements.md         ← Spec כללי: דרישות המערכת
-├── design.md               ← Spec כללי: ארכיטקטורה
-├── tasks.md                ← Spec כללי: משימות פרויקט
-│
-├── secure-file-distribution/
-│   ├── requirements.md     ← Feature ספציפי
-│   ├── design.md
-│   └── tasks.md
-│
-└── client-file-upload-ui/
-    ├── requirements.md     ← Feature ספציפי
-    ├── design.md           (מקשר ל-spec כללי עם #[[file:../requirements.md]])
-    └── tasks.md
+docs/specs/service-spec.md  ←  מקור האמת (Source of Truth)
+.kiro/specs/                ←  SPECs שנוצרו בתהליך עבודה עם כלי AI
+_bmad-output/               ←  SPECs שנוצרו בתהליך עבודה עם כלי AI
 ```
 </div>
+
+**`docs/specs/service-spec.md` הוא תמיד מקור האמת של ה-SPEC הכללי של השירות.**
+
+הסיבה: לא כולם עובדים עם KIRO או עם כלי AI אחר. תיקיית `docs/` היא tool-agnostic — כל אדם בארגון יכול לקרוא אותה, ללא תלות בכלי ספציפי. תיקיות כמו `.kiro/` או `_bmad-output/` הן tool-specific — מי שלא עובד עם הכלי הספציפי לא ייכנס לשם.
+
+### כיוון המיזוג
+
+כיוון המיזוג הוא תמיד **מ-tool-specific אל `docs/specs/`**:
+
+<div dir="ltr">
+
+```
+.kiro/specs/feature-x/    ──→  docs/specs/service-spec.md
+_bmad-output/feature-y/   ──→  docs/specs/service-spec.md
+                                docs/specs/features/feature-x-spec.md
+```
+</div>
+
+כלומר: אחרי שפיצ'ר מאושר ומסיים פיתוח, מעדכנים את `service-spec.md` (ו/או יוצרים feature spec ב-`docs/specs/features/`) עם השינויים הרלוונטיים.
+
+**לעולם לא בכיוון ההפוך** — אין למזג מ-`docs/specs/` אל `.kiro/specs/`.
 
 
 # 🔀 5. ניהול שינויים וגירסאות בתהליך SDD
